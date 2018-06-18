@@ -1,0 +1,5 @@
+---
+# file: roles/apache-vhost/meta/main.yml
+dependencies:
+  - { role: apache }
+  - { role: php }

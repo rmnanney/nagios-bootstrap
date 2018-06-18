@@ -1,0 +1,122 @@
+---
+# file: roles/apache/tasks/main.yml
+
+- name: Checking to see if apache {{ apache_version }} is already installed
+  shell: /usr/local/apache2/bin/apachectl -v | grep {{ apache_version }} | wc -l
+  ignore_errors: yes
+  changed_when: false
+  register: isApacheInstalled
+  tags:
+    - apache
+
+- name: Installing Apache dependencies
+  apt: name={{ item }} state=present
+  with_items:
+    - libaprutil1
+    - libaprutil1-dev
+    - libssl-dev
+    - libpcre3-dev
+    - build-essential
+  notify: Start Apache
+  tags:
+    - apache
+
+- name: Download Apache {{ apache_version }} tarball
+  unarchive:
+    src: http://apache.mirrors.lucidnetworks.net//httpd/httpd-{{ apache_version }}.tar.bz2
+    dest: ~/
+    creates: ~/httpd-{{ apache_version }}.tar.bz2
+    remote_src: yes
+  when: isApacheInstalled.stdout != "1"
+  tags:
+    - apache
+
+- name: Running ./configure for Apache {{ apache_version }}
+  command: ./configure --enable-ssl --enable-so --with-mpm=prefork --enable-rewrite --bindir=/usr/bin --sysconfdir=/etc/apache2
+  args:
+    chdir: ~/httpd-{{ apache_version }}/
+  when:
+    - isApacheInstalled.stdout != "1"
+  tags:
+    - apache
+
+- name: Running "make" for Apache {{ apache_version }}
+  command: make
+  args:
+    chdir: ~/httpd-{{ apache_version }}/
+  when:
+    - isApacheInstalled.stdout != "1"
+  tags:
+    - apache
+
+- name: Running "make install" for Apache {{ apache_version }}
+  command: make install
+  args:
+    chdir: ~/httpd-{{ apache_version }}/
+  when:
+    - isApacheInstalled.stdout != "1"
+  tags:
+    - apache
+
+- name: Add /usr/local/apache2/bin to system-wide $PATH.
+  copy:
+    dest: /etc/profile.d/custom-path.sh
+    content: 'PATH=$PATH:/usr/local/apache2/bin'
+  tags:
+    - apache
+
+- name: Setup apache.service in systemd
+  copy:
+    src: files/apache.service
+    dest: /etc/systemd/system/apache.service
+    mode: 0755
+  tags:
+    - apache
+
+- name: Create www-data account
+  user:
+    name: "www-data"
+    groups: "www-data"
+    shell: "/usr/sbin/nologin"
+  tags:
+    - apache
+
+- name: Copying and populating httpd.conf template
+  template: src=httpd.conf.j2 dest=/etc/apache2/httpd.conf
+  notify:
+    - Reload Apache
+  tags:
+    - apache
+
+- name: Set Apache service to launch on boot and start the service
+  systemd:
+    name: apache
+    enabled: yes
+    state: started
+  tags:
+    - apache
+
+- name: Create /etc/apache2/vhosts directory
+  file:
+    path: "{{ item }}"
+    owner: www-data
+    group: www-data
+    state: directory
+  with_items:
+    - "/etc/apache2/vhosts"
+    - "/var/log/apache2"
+  tags:
+    - apache
+
+- name: Put "apache" user in vagrant group (when local_env true)
+  user:
+    name: "apache"
+    groups: "vagrant"
+    append: yes
+  tags:
+    - apache
+  when:
+    - local_env
+
+#todo: ensure ExtendedStatus On is configured
+#todo: ensure logrotate is configured

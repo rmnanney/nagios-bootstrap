@@ -1,0 +1,11 @@
+---
+# file: playbook.yml
+
+- hosts: nagios.yourdomain.local
+  become: yes
+  roles:
+    - common
+    - apache
+    - php
+    - nagios
+    - apache-vhost

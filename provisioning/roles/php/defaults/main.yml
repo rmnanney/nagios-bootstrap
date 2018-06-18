@@ -1,0 +1,11 @@
+php_symlinks:
+  - source: "/usr/include/x86_64-linux-gnu/curl"
+    destination: "/usr/include/curl"
+  - source: "/usr/lib/x86_64-linux-gnu/libldap.so"
+    destination: "/usr/lib/libldap.so"
+  - source: "/usr/lib/x86_64-linux-gnu/liblber.so"
+    destination: "/usr/lib/liblber.so"
+  - source: "/usr/local/bin/php"
+    destination: "/usr/bin/php"
+#  - source: "/usr/include/x86_64-linux-gnu/gmp.h"
+#    destination: "/usr/include/gmp.h"

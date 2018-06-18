@@ -1,0 +1,104 @@
+---
+# file: roles/apache_vhost/tasks/main.yml
+
+- debug:
+    var: apache_vhosts
+    verbosity: 2
+  tags:
+    - apache_vhost
+
+- name: Ensure /var/www exists, is owned by www-data and is 0775
+  file:
+    state: directory
+    path: /var/www
+    mode: 0775
+    owner: www-data
+    group: www-data
+  tags:
+    - apache_vhost
+    
+- name: Create vhost directories
+  file:
+    path: /var/www/{{ item.value.serverName }}
+    state: directory
+    mode: 4777
+    owner: "{{ item.value.owner }}"
+    group: "{{ item.value.group }}"
+    recurse: yes
+  with_dict: "{{ apache_vhosts }}"
+  tags:
+    - apache_vhost
+
+#- name: Copy private ssh deployment key so we can use git as the www-data
+#  copy:
+#    src: deployment_read_only_id_rsa
+#    dest: /tmp/git_id_rsa
+#    mode: 0400
+#    owner: www-data
+#    group: www-data
+#  tags:
+#    - apache_vhost
+
+- name: Configuring virtual hosts
+  template:
+    src: vhost-template.j2
+    dest: /etc/apache2/vhosts/{{item.value.serverName}}.conf
+    owner: www-data
+    group: www-data
+  with_dict: "{{ apache_vhosts }}"
+  notify: Reload Apache
+  tags:
+    - apache_vhost
+
+- name: Installing vhost package dependencies
+  apt: name={{item.value.dependencies}} state=present
+  with_dict: "{{ apache_vhosts }}"
+  when: item.value.dependencies is defined
+  tags:
+    - apache_vhost
+
+- name: Checking if we need to clone vhosts into /var/www/
+  stat: path={{ item.value.serverRoot }}/.git
+  with_dict: "{{ apache_vhosts }}"
+  when: item.value.gitRepository is defined
+  register: apache_vhost_needing_clone
+  tags:
+    - apache_vhost
+
+#- debug:
+#    msg: "item.item.key={{item.item.key}} item.item.value.gitRepository={{item.item.value.gitRepository}}"
+#  with_items: "{{ apache_vhost_needing_clone.results }}"
+#  when: item.failed is defined
+#  verbosity: 2
+#  tags:
+#    - apache_vhost
+
+- name: As www-data, clone missing git repositories
+  git: repo={{ item.item.value.gitRepository }}
+         dest={{ item.item.value.serverRoot }}
+         accept_hostkey=yes
+         ssh_opts="-o StrictHostKeyChecking=no"
+         key_file=/tmp/git_id_rsa
+         version={{ item.item.value.gitBranch }}
+  become: yes
+  become_user: www-data
+  with_items: "{{ apache_vhost_needing_clone.results }}"
+  when: item.failed is defined
+  tags:
+    - apache_vhost
+
+- name: Checking if we need to run composer install --optimize-autoloader --no-dev on a vhost
+  composer: command=install working_dir={{ item.value.serverRoot }} no_dev=True optimize_autoloader=yes
+  become_user: www-data
+  with_dict: "{{ apache_vhosts }}"
+  when: item.value.composerNoDev is defined
+  tags:
+    - apache_vhost
+
+- name: Checking if we need to run composer install --optimize-autoloader on a vhost
+  composer: command=install working_dir={{ item.value.serverRoot }} no_dev=False optimize_autoloader=yes
+  become_user: www-data
+  with_dict: "{{ apache_vhosts }}"
+  when: item.value.composerWithDev is defined
+  tags:
+    - apache_vhost

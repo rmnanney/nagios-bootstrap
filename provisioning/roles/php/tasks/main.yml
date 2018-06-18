@@ -1,0 +1,174 @@
+---
+# file: roles/php/tasks/main.yml
+
+- name: Installing necessary items to build {{ php_version }} from source
+  apt:
+    name: "{{ item }}"
+    state: present
+  with_items: "{{ php_dependencies }}"
+  tags:
+    - php
+
+- name: Get the PHP version to see if we need an install or version change
+  shell: php -v | awk 'NR==1{print $2}'
+  ignore_errors: yes
+  changed_when: false
+  register: installedPHPVersion
+  tags:
+    - php
+
+- name: Download PHP {{ php_version }}
+  unarchive:
+    src: http://php.net/get/php-{{ php_version }}.tar.bz2/from/this/mirror
+    copy: no
+    dest: ~/
+  when: installedPHPVersion.stdout != php_version
+  tags:
+    - php
+
+- name: Running ./configure {{ php_configure_options }} for PHP {{ php_version }}
+  command: ./configure {{ php_configure_options }}
+  args:
+    chdir: ~/php-{{ php_version }}/
+  when: installedPHPVersion.stdout != php_version
+  tags:
+    - php
+
+- name: Running "make" for PHP {{ php_version }}
+  command: make
+  args:
+    chdir: ~/php-{{ php_version }}/
+  when: installedPHPVersion.stdout != php_version
+  tags:
+    - php
+
+- name: Running "make install" for PHP {{ php_version }}
+  command: make install
+  args:
+    chdir: ~/php-{{ php_version }}/
+  when:
+    - installedPHPVersion.stdout != php_version
+    - php_enable_webserver
+  notify: Reload Apache
+  tags:
+    - php
+
+- name: Running "make install" for PHP {{ php_version }}
+  command: make install
+  args:
+    chdir: ~/php-{{ php_version }}/
+  when:
+    - installedPHPVersion.stdout != php_version
+    - not php_enable_webserver
+  tags:
+    - php
+
+- name: Ensure php log file is created with proper permissions
+  file:
+    path: /var/log/php.log
+    owner: www-data
+    state: touch
+  changed_when: false #... (state=touch)
+  notify:
+    - Reload Apache
+  tags:
+    - php
+
+- name: Only deal with index.php files by default
+  lineinfile:
+    dest: /etc/apache2/httpd.conf
+    state: present
+    line: "DirectoryIndex index.php"
+  when: php_enable_webserver
+  tags:
+    - php
+
+- name: Create file for PHP configuration in Apache
+  file:
+    path: /etc/apache2/php.conf
+    state: touch
+  when: php_enable_webserver
+  tags:
+    - php
+
+- name: Update Apache config to handle our PHP environments
+  blockinfile:
+    dest: /etc/apache2/php.conf
+    block: |
+      LoadModule speling_module   modules/mod_speling.so
+      LoadModule rewrite_module   modules/mod_rewrite.so
+      <FilesMatch \.php$>
+          SetHandler application/x-httpd-php
+      </FilesMatch>
+      AddType application/x-httpd-php .php
+  when: php_enable_webserver
+  notify:
+    - Reload Apache
+  tags:
+    - php
+
+- name: Add php5 shared object into apache config
+  lineinfile:
+    state: present
+    dest: /etc/apache2/php.conf
+    line: LoadModule php7_module      modules/libphp7.so
+  when: php_version | version_compare('7.0.0', operator='>=', strict=True)
+
+- name: Add php7 shared object into apache config
+  lineinfile:
+    state: present
+    dest: /etc/apache2/php.conf
+    line: LoadModule php5_module      modules/libphp5.so
+  when: php_version | version_compare('7.0.0', operator='<', strict=True)
+
+- name: stat /usr/local/lib/php.ini
+  stat: path=/usr/local/lib/php.ini
+  register: phpini_stat
+  tags:
+    - php
+
+- name: Copy the default php.ini-development to /usr/local/lib/php.ini
+  copy: src=~/php-{{ php_version }}/php.ini-development dest=/usr/local/lib/php.ini remote_src=true
+  when: phpini_stat.stat.exists == false
+  tags:
+    - php
+
+- name: Update /usr/local/lib/php.ini with some helpful settings
+  lineinfile: state=present dest=/usr/local/lib/php.ini line={{item}}
+  with_items:
+    - "error_log = /var/log/php.log"
+    - "log_errors = On"
+    - "error_reporting = {{ php_error_reporting }}"
+    - "date.timezone = America/Chicago"
+    - "short_open_tag = On"
+    - "display_errors = Off"
+  tags:
+    - php
+
+- name: Ensure the vagrant user is in the www-data group, for CLI scripts
+  user:
+    name: vagrant
+    shell: /bin/bash
+    groups: www-data
+    append: yes
+  when:
+    - local_env
+  tags:
+    - php
+
+- name: Setup logrotate on /var/log/php.log
+  copy:
+    src: logrotate-php
+    dest: /etc/logrotate.d/php
+  tags:
+    - php
+
+- name: Install composer
+  shell: curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin creates=/usr/local/bin/composer
+  tags:
+    - php
+
+- name: Rename composer
+  shell: mv /usr/local/bin/composer.phar /usr/local/bin/composer creates=/usr/local/bin/composer
+  tags:
+    - php

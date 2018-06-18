@@ -1,0 +1,11 @@
+[Unit]
+Description=Nagios Monitoring System
+After=network.target
+
+[Service]
+ExecStart=/usr/local/nagios/bin/nagios /usr/local/nagios/etc/nagios.cfg
+ExecReload=/bin/kill -HUP $MAINPID
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target

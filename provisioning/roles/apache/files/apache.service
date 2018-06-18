@@ -1,0 +1,16 @@
+[Unit]
+Description=The Apache HTTP Server
+
+[Service]
+Type=forking
+EnvironmentFile=/usr/local/apache2/bin/envvars
+PIDFile=/usr/local/apache2/logs/httpd.pid
+ExecStart=/usr/local/apache2/bin/apachectl start
+ExecReload=/usr/local/apache2/bin/apachectl graceful
+ExecStop=/usr/local/apache2/bin/apachectl stop
+KillSignal=SIGCONT
+PrivateTmp=true
+
+
+[Install]
+WantedBy=multi-user.target

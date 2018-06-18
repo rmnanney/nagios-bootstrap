@@ -1,0 +1,141 @@
+# provisioning/roles/nagios/tasks/main.yml
+
+- name: Get the current Nagios version to see if we need an install or version change
+  shell: /usr/local/nagios/bin/nagios --version | grep Nagios\ Core | awk 'NR==1{print $3}'
+  ignore_errors: yes
+  changed_when: false
+  register: installedNagiosVersion
+  tags:
+    - nagios
+
+- name: Download Nagios Core {{ nagios_version }}
+  unarchive:
+    src: https://assets.nagios.com/downloads/nagioscore/releases/nagios-{{ nagios_version }}.tar.gz
+    copy: no
+    dest: ~/
+  tags:
+    - nagios
+
+- name: Running ./configure --with-httpd-conf=/etc/apache2/extra for Nagios {{ nagios_version }}
+  command: ./configure --with-httpd-conf=/etc/apache2/extra
+  args:
+    chdir: ~/nagios-{{ nagios_version }}/
+  when: installedNagiosVersion.stdout != nagios_version
+  tags:
+    - nagios
+
+- name: Running "make all" for Nagios {{ nagios_version }}
+  command: make all
+  args:
+    chdir: ~/nagios-{{ nagios_version }}/
+  when: installedNagiosVersion.stdout != nagios_version
+  tags:
+    - nagios
+
+- name: Setup nagios user account
+  user:
+    name: nagios
+    groups: www-data
+    append: yes
+  tags:
+    - nagios
+
+- name: Running "make install" for Nagios {{ nagios_version }}
+  command: make install
+  args:
+    chdir: ~/nagios-{{ nagios_version }}/
+  when: installedNagiosVersion.stdout != nagios_version
+  tags:
+    - nagios
+
+- name: Setup nagios.service
+  copy:
+    src: nagios.service
+    dest: /etc/systemd/system
+  tags:
+    - nagios
+
+- name: Running "make install-commandmode" for Nagios {{ nagios_version }}
+  command: make install-commandmode
+  args:
+    chdir: ~/nagios-{{ nagios_version }}/
+  when: installedNagiosVersion.stdout != nagios_version
+  tags:
+    - nagios
+
+- name: Running "make install-config" for Nagios {{ nagios_version }}
+  command: make install-config
+  args:
+    chdir: ~/nagios-{{ nagios_version }}/
+  when: installedNagiosVersion.stdout != nagios_version
+  tags:
+    - nagios
+
+- name: Running "make install-webconf" for Nagios {{ nagios_version }}
+  command: make install-webconf
+  args:
+    chdir: ~/nagios-{{ nagios_version }}/
+  when: installedNagiosVersion.stdout != nagios_version
+  tags:
+    - nagios
+
+#- name: Running "make install-init" for Nagios {{ nagios_version }}
+#  command: make install-init
+#  args:
+#    chdir: ~/nagios-{{ nagios_version }}/
+#  when: installedNagiosVersion.stdout != nagios_version
+#  tags:
+#    - nagios
+
+- name: Ensure Apache loads in Nagios configurations
+  lineinfile:
+    dest: /etc/apache2/httpd.conf
+    state: present
+    line: "{{ item }}"
+  with_items:
+    - "Include /etc/apache2/extra/nagios.conf"
+    - "LoadModule cgi_module modules/mod_cgi.so"
+    - "LoadModule rewrite_module modules/mod_rewrite.so"
+  notify: Restart Apache
+  tags:
+    - nagios
+
+- name: asdf
+  htpasswd:
+    path: /usr/local/nagios/etc/htpasswd.users
+    name: nagiosadmin
+    password: 'demo'
+    owner: root
+    group: www-data
+    mode: 0640
+  tags:
+    - nagios
+
+- name: Enable nagios.service
+  systemd:
+    name: nagios.service
+    state: started
+    enabled: yes
+
+- name: Download Nagios Plugins {{ nagios_plugins_version }}
+  unarchive:
+    src: https://github.com/nagios-plugins/nagios-plugins/archive/release-.tar.gz
+    src: https://nagios-plugins.org/download/nagios-plugins-{{ nagios_plugins_version }}.tar.gz
+    copy: no
+    dest: ~/
+  tags:
+    - nagios
+    - nagios_plugins
+
+- name: Compile and install Nagios Plugins {{ nagios_plugins_version }}
+  command: "{{ item }}"
+  args:
+    chdir: ~/nagios-plugins-{{ nagios_plugins_version }}/
+#  when: installedNagiosVersion.stdout != nagios_version
+  with_items:
+    - ./configure
+    - make
+    - make install
+  tags:
+    - nagios
+    - nagios_plugins

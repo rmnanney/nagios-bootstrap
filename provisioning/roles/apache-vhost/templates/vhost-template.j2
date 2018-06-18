@@ -1,0 +1,36 @@
+<VirtualHost *:80>
+    ServerName {{ item.value.serverName }}
+    ServerAdmin {{ item.value.serverAdmin }}
+    DocumentRoot {{ item.value.documentRoot }}
+    LogLevel {{ item.value.logLevel }}
+    LogFormat "%{X-Forwarded-For}i - %h %l %u %t \"%r\" %>s %O \"%{Referer}i\" \"%{User-Agent}i\""
+    ErrorLog /var/log/apache2/{{ item.value.serverName }}.error_log
+    TransferLog /var/log/apache2/{{ item.value.serverName }}.access_log
+    <Directory {{ item.value.documentRoot }}>
+        Options Indexes FollowSymLinks MultiViews
+        AllowOverride All
+        Require all granted
+    </Directory>
+</VirtualHost>
+
+{% if item.value.sslEngine == "On" %}
+<VirtualHost *:443>
+    ServerName {{ item.value.serverName }}
+    ServerAdmin {{ item.value.serverAdmin }}
+    DocumentRoot {{ item.value.documentRoot }}
+    LogLevel {{ item.value.logLevel }}
+    LogFormat "%{X-Forwarded-For}i - %h %l %u %t \"%r\" %>s %O \"%{Referer}i\" \"%{User-Agent}i\""
+    ErrorLog /var/log/apache2/{{ item.value.serverName }}.error_log
+    TransferLog /var/log/apache2/{{ item.value.serverName }}.access_log
+    <Directory {{ item.value.documentRoot }}>
+        Options Indexes FollowSymLinks MultiViews
+        AllowOverride All
+        Require all granted
+    </Directory>
+    SSLEngine On
+    SSLCertificateFile /etc/ssl/certs/yourdomain.com.crt
+    SSLCertificateKeyFile /etc/ssl/private/yourdomain.com.key
+    SSLCertificateChainFile /etc/ssl/certs/gd_bundle-g2-g1.crt
+</VirtualHost>
+{% endif %}
+# vim: ts=4 filetype=apache

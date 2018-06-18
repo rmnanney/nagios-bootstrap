@@ -1,0 +1,5 @@
+---
+# file: roles/common/handlers/main.yml
+
+- name: Restart Graylog Collector
+  service: name=collector-sidecar state=restarted enabled=yes

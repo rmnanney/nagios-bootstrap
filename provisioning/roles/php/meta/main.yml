@@ -1,0 +1,4 @@
+---
+# file: roles/php7/meta/main.yml
+dependencies:
+  - { role: common }

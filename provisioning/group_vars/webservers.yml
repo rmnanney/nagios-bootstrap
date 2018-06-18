@@ -1,0 +1,39 @@
+# file: group_vars/webservers.yml
+
+local_env: false
+php_version: 7.2.6
+apache_version: 2.4.33
+php_enable_webserver: true
+php_configure_options: --with-apxs2 --with-openssl --with-zlib --enable-zip --with-mysqli --with-pdo-mysql --with-curl --with-jpeg-dir --with-gd --enable-intl --enable-mbstring --with-mcrypt --with-mhash --enable-soap  --with-xsl --enable-zip --enable-bcmath --enable-soap --enable-ftp
+php_error_reporting: E_ALL & ~E_NOTICE & ~E_WARNING & ~E_STRICT & ~E_DEPRECATED
+php_dependencies:
+  - build-essential
+  - libxml2-dev
+  - libssl-dev
+  - pkg-config
+  - python-passlib
+  - curl
+  - git
+  - libcurl4-gnutls-dev
+  - libpng-dev
+  - libicu-dev
+  - libmcrypt-dev
+  - libxslt1-dev
+  - libjpeg-dev
+  - unixodbc
+  - unixodbc-dev
+  - ldap-utils
+  - libldb-dev
+  - libldap2-dev
+xdebug_version: xdebug-2.6.0
+php_symlinks:
+#  - source: "/usr/include/x86_64-linux-gnu/curl"
+#    destination: "/usr/include/curl"
+#  - source: "/usr/lib/x86_64-linux-gnu/libldap.so"
+#    destination: "/usr/lib/libldap.so"
+#  - source: "/usr/lib/x86_64-linux-gnu/liblber.so"
+#    destination: "/usr/lib/liblber.so"
+#  - source: "/usr/local/bin/php"
+#    destination: "/usr/bin/php"
+#  - source: "/usr/include/x86_64-linux-gnu/gmp.h"
+#    destination: "/usr/include/gmp.h"

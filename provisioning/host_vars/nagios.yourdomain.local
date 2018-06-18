@@ -1,0 +1,15 @@
+# file: host_vars/nagios.yoursite.local
+
+local_env: true
+nagios_version: 4.3.4
+nagios_plugins_version: 2.2.1
+apache_vhosts:
+  nagios.yourdomain.local:
+    serverName: "nagios.yourdomain.local"
+    serverAdmin: "rockstar@yourdomain.com"
+    serverRoot: "/var/www/nagios.yourdomain.local"
+    documentRoot: "/var/www/nagios.yourdomain.local/public_html"
+    logLevel: "Warn"
+    sslEngine: "Off"
+    owner: "www-data"
+    group: "vagrant"

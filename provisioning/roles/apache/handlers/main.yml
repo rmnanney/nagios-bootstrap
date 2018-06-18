@@ -1,0 +1,11 @@
+---
+# file: roles/apache/handlers/main.yml
+
+- name: Start Apache
+  service: name=apache state=started enabled=yes
+
+- name: Reload Apache
+  service: name=apache state=reloaded
+
+- name: Restart Apache
+  service: name=apache state=restarted

@@ -1,0 +1,81 @@
+---
+# file: roles/common/tasks/main.yml
+
+- name: Ensure aptitude before we get rolling.
+  apt:
+    name: "{{ item }}"
+  with_items:
+    - aptitude
+  tags:
+    - common
+    
+- name: Updating all packages do the latest version
+  apt: upgrade=safe update_cache=yes
+  tags:
+    - common
+    
+- name: Installing common utilities like vim and screen
+  apt: name={{ item }} state=latest
+  with_items:
+    - sudo
+    - vim
+    - screen
+    - links
+    - ntp
+    - git
+    - mysql-client
+    - pbzip2
+    - bash-completion
+    - unzip
+  tags:
+    - common
+    
+- name: Set the server's hostname
+  hostname: name={{ server_name }}
+  when:
+    - server_name is defined
+  tags:
+    - common
+    
+- name: Setup /etc/hosts to have the server's hostname
+  lineinfile: dest=/etc/hosts regexp='^127\.0\.0\.1' line='127.0.0.1 {{ server_name }} localhost '
+  when: server_name is defined
+  tags:
+    - common
+
+- name: Setup any custom /etc/hosts entries
+  lineinfile:
+    dest: /etc/hosts
+    line: '{{ item.ip }} {{ item.hostname }}'
+  with_items: "{{ etc_hosts }}"
+  when: etc_hosts is defined
+  tags:
+    - common
+
+- name: Set the timezone to US/Central
+  file: src=/usr/share/zoneinfo/US/Central dest=/etc/localtime state=link force=yes
+  tags:
+    - common
+    
+- name: Create the /archive folder for consistent backup locations
+  file:
+    path: /archive
+    state: directory
+    owner: www-data
+    group: adm
+    mode: 0664
+  tags:
+    - common
+
+- name: If cron jobs are specificed, set them up
+  cron:
+    name: "{{item.value.name}}"
+    minute: "{{item.value.minute}}"
+    hour: "{{item.value.hour}}"
+    job: "{{item.value.job}}"
+    user: "{{item.value.user}}"
+  when: cron_jobs is defined
+  with_dict: "{{cron_jobs}}"
+  tags:
+    - common
+    - cronjobs

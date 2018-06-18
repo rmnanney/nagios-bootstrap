@@ -1,4 +1,4 @@
-# file: host_vars/nagios.yoursite.local
+# file: host_vars/nagios.yourdomain.local
 
 local_env: true
 nagios_version: 4.3.4

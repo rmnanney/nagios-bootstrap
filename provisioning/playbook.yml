@@ -9,3 +9,10 @@
     - php
     - nagios
     - apache-vhost
+
+- hosts: sql.yourdomain.local
+  become: yes
+  roles:
+    - common
+    - mysql
+    - nrpe

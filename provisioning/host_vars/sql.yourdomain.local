@@ -1,0 +1,8 @@
+# file: host_vars/sql.yourdomain.local
+
+local_env: true
+mysql_users:
+  development:
+    password: development
+    host: "%"
+    priv: "*.*:ALL"

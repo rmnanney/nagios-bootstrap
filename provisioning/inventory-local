@@ -1,5 +1,11 @@
 [nagios.yourdomain.local]
 192.168.123.200 ansible_connection=ssh ansible_ssh_user=vagrant ssh_args=-o ForwardAgent=yes
 
+[sql.yourdomain.local]
+192.168.123.201 ansible_connection=ssh ansible_ssh_user=vagrant ssh_args=-o ForwardAgent=yes
+
 [webservers]
 nagios.yourdomain.local
+
+[sqlservers]
+sql.yourdomain.local

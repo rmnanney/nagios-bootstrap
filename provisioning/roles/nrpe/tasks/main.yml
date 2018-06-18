@@ -1,0 +1,37 @@
+---
+# file: roles/nrpe/tasks/main.yml
+
+- name: Installing nrpe
+  apt: name={{ item }} state=latest
+  with_items:
+    - nagios-nrpe-server
+    - nagios-plugins
+    - libapr1
+    - nagios-plugins-contrib
+  tags:
+    - nrpe
+
+- name: Create the /var/cache/nagios directory
+  file:
+    path: /var/cache/nagios
+    state: directory
+    owner: nagios
+  notify: Restart nrpe
+  tags:
+    - nrpe
+
+- name: Set our nagios box as the only allowed host
+  lineinfile:
+    dest: /etc/nagios/nrpe.cfg
+    regexp: "^allowed_hosts="
+    line: "allowed_hosts=10.100.5.108"
+  notify: Restart nrpe
+  tags:
+    - nrpe
+
+- name: Allow commands with arguments
+  lineinfile:
+    dest: /etc/nagios/nrpe.cfg
+    regexp: "^dont_blame_nrpe="
+    line: "done_blame_nrpe=1"
+  notify: Restart nrpe

@@ -7,7 +7,7 @@ end
 
 Vagrant.configure(2) do |config|
 
-    config.vm.define "nagios.yourdomain.local" do |nagios|
+    config.vm.define "nagios2.yourdomain.local" do |nagios|
         nagios.vm.box = "serotonin/debian9"
         nagios.vm.network "private_network", ip: "192.168.123.200"
         nagios.hostsupdater.aliases = ["nagios.yourdomain.local"]
@@ -28,7 +28,33 @@ Vagrant.configure(2) do |config|
             ansible.become_user = "root"
             ansible.limit = 'nagios.yourdomain.local'
             ansible.extra_vars = {
-            ansible_ssh_args: '-o ForwardAgent=yes'
+                ansible_ssh_args: '-o ForwardAgent=yes'
+            }
+        end
+    end
+
+    config.vm.define "sql.yourdomain.local" do |sql|
+        sql.vm.box = "serotonin/debian9"
+        sql.vm.network "private_network", ip: "192.168.123.201"
+        sql.hostsupdater.aliases = ["sql.yourdomain.local"]
+
+        sql.vm.provider "virtualbox" do | v |
+            v.memory = 1024
+            v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
+            v.customize ["modifyvm", :id, "--natdnsproxy1", "on"]
+        end
+
+        sql.vm.provision "ansible" do |ansible|
+            #ansible.verbose = "vvvv"
+            #ansible.tags = ['nrpe']
+            ansible.playbook = "provisioning/playbook.yml"
+            ansible.inventory_path = "provisioning/inventory-local"
+            ansible.host_key_checking = false
+            ansible.become = true
+            ansible.become_user = "root"
+            ansible.limit = 'sql.yourdomain.local'
+            ansible.extra_vars = {
+                ansible_ssh_args: '-o ForwardAgent=yes'
             }
         end
     end

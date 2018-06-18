@@ -1,0 +1,89 @@
+---
+# file: roles/mysql/tasks/main.yml
+
+- name: Add MySQL repository key
+  apt_key: url=http://repo.mysql.com/RPM-GPG-KEY-mysql state=present
+  tags:
+    - mysql
+
+- name: Add MySQL Server repository
+  apt_repository: repo='deb http://repo.mysql.com/apt/debian/ stretch mysql-5.6' state=present
+  tags:
+    - mysql
+
+- name: Add MySQL Python Connector repository
+  apt_repository: repo='deb http://repo.mysql.com/apt/debian/ stretch connector-python-2.0' state=present
+  tags:
+    - mysql
+
+- name: Installing MySQL and necessary python utils to create users
+  apt: name={{item}} state=present
+  notify: Start MySQL
+  with_items:
+    - mysql-community-server
+    - python-mysqldb
+    - iotop
+    - sysstat
+    - percona-toolkit
+  tags:
+    - mysql
+
+- name: Create SQL accounts for triggers, views and such
+  mysql_user: name={{item}} host=% priv=*.*:ALL,GRANT password=supersecretpasswordyes state=present
+  with_items:
+    - master
+    - root
+  tags:
+    - mysql
+
+- name: Setting MySQL to read-only if this role has defined mysql_read_only
+  lineinfile: dest=/etc/mysql/conf.d/mysqld.ro.cnf line="read-only=1"
+  when:
+    - mysql_read_only is defined
+    - mysql_read_only
+  notify: Restart MySQL
+  tags:
+    - mysql
+
+- name: Copying and populating /etc/mysql/conf.d/mysqld.cnf template
+  template: src=templates/my.cnf.production.readonly.j2 dest=/etc/mysql/conf.d/mysqld.ro.cnf
+  when:
+    - mysql_read_only is defined
+    - mysql_read_only
+  tags:
+    - mysql
+
+- name: Create development SQL account (local dev only)
+  mysql_user: name=development password=development host=% priv=*.*:ALL,GRANT state=present
+  when:
+    - local_env
+  tags:
+    - mysql
+
+- name: Copying and populating /etc/mysql/conf.d/mysqld.local.cnf template for local development environments
+  template: src=templates/mysqld.local.cnf.j2 dest=/etc/mysql/conf.d/mysqld.local.cnf
+  notify: Restart MySQL
+  when:
+    - local_env
+  tags:
+    - mysql
+
+- name: DEVONLY Disable the general query log (local dev only)
+  lineinfile: dest=/etc/mysql/mysql.conf.d/mysqld.cnf line="general_log = 0"
+  notify: Restart MySQL
+  when:
+    - local_env
+  tags:
+    - mysql
+
+- name: Create all mysql user accounts defined in the config
+  mysql_user:
+    name: "{{item.key}}"
+    password: "{{item.value.password}}"
+    host: "{{item.value.host}}"
+    priv: "{{item.value.priv}}"
+    state: present
+  with_dict: "{{ mysql_users }}"
+  when: mysql_users is defined
+  tags:
+    - mysql

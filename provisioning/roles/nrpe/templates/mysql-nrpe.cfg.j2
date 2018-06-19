@@ -1,5 +1,5 @@
 command[check_sda1]=/usr/lib/nagios/plugins/check_disk -w 10% -c 5% -p /
-command[check_mysql]=/usr/lib/nagios/plugins/check_mysql -H localhost -d ibmilw -u nagios -p {{ nagios_sql_password }}
+command[check_mysql]=/usr/lib/nagios/plugins/check_mysql -H localhost -d ibmilw -u {{ nagios_sql_username }} -p {{ nagios_sql_password }}
 command[check_mysql_threads_connected]=/usr/lib/nagios/plugins/check_mysql_health --hostname localhost --username {{ nagios_sql_username }} --password {{ nagios_sql_password }} --mode threads-connected
 command[check_mysql_threadcache_hitrate]=/usr/lib/nagios/plugins/check_mysql_health --hostname localhost --username {{ nagios_sql_username }} --password {{ nagios_sql_password }} --mode threadcache-hitrate
 command[check_mysql_threads_created]=/usr/lib/nagios/plugins/check_mysql_health --hostname localhost --username {{ nagios_sql_username }} --password {{ nagios_sql_password }} --mode threads-created

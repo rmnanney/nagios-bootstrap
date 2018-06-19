@@ -6,3 +6,9 @@ mysql_users:
     password: development
     host: "%"
     priv: "*.*:ALL"
+  development:
+    password: development
+    host: "localhost"
+    priv: "*.*:ALL"
+nagios_sql_username: development
+nagios_sql_password: development

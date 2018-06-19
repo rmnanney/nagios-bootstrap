@@ -100,7 +100,44 @@
   tags:
     - nagios
 
-- name: asdf
+- name: Setup USER2 variable
+  lineinfile:
+    dest: /usr/local/nagios/etc/resource.cfg
+    state: present
+    line: '$USER2$=/usr/lib/nagios/plugins'
+  tags:
+    - nagios
+
+- name: Configure Nagios to look for config files in /usr/local/nagios/etc/objects/servers
+  lineinfile:
+    dest: /usr/local/nagios/etc/nagios.cfg
+    state: present
+    line: 'cfg_dir=/usr/local/nagios/etc/objects/servers'
+  tags:
+    - nagios
+
+- name: Create the /usr/local/nagios/etc/objects/servers folder
+  file:
+    path: /usr/local/nagios/etc/objects/servers
+    state: directory
+    owner: nagios
+    group: nagios
+    mode: 0775
+  tags:
+    - nagios
+
+- name: Add check_nrpe command to our Nagios config
+  blockinfile:
+    dest: /usr/local/nagios/etc/objects/commands.cfg
+    block: |
+      define command{
+        command_name    check_nrpe
+        command_line    $USER2$/check_nrpe -H $HOSTADDRESS$ -c $ARG1$
+      }
+  tags:
+    - nagios
+
+- name: Add demo user to htpasswd
   htpasswd:
     path: /usr/local/nagios/etc/htpasswd.users
     name: nagiosadmin
@@ -136,6 +173,15 @@
     - ./configure
     - make
     - make install
+  tags:
+    - nagios
+    - nagios_plugins
+
+- name: Ensure check_nrpe is installed
+  apt:
+    name: "{{ item }}"
+  with_items:
+    - nagios-nrpe-plugin
   tags:
     - nagios
     - nagios_plugins

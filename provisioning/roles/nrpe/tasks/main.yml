@@ -24,7 +24,7 @@
   lineinfile:
     dest: /etc/nagios/nrpe.cfg
     regexp: "^allowed_hosts="
-    line: "allowed_hosts=10.100.5.108"
+    line: "allowed_hosts=127.0.0.1,192.168.123.0/24"
   notify: Restart nrpe
   tags:
     - nrpe
@@ -35,3 +35,11 @@
     regexp: "^dont_blame_nrpe="
     line: "done_blame_nrpe=1"
   notify: Restart nrpe
+
+- name: Populate MySQL specific NRPE commands
+  template: src=templates/mysql-nrpe.cfg.j2 dest=/etc/nagios/nrpe.d/mysql-nrpe.cfg
+  when:
+    - nagios_sql_username is defined
+    - nagios_sql_password is defined
+  tags:
+    - nrpe

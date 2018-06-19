@@ -7,7 +7,7 @@ end
 
 Vagrant.configure(2) do |config|
 
-    config.vm.define "nagios2.yourdomain.local" do |nagios|
+    config.vm.define "nagios.yourdomain.local" do |nagios|
         nagios.vm.box = "serotonin/debian9"
         nagios.vm.network "private_network", ip: "192.168.123.200"
         nagios.hostsupdater.aliases = ["nagios.yourdomain.local"]
